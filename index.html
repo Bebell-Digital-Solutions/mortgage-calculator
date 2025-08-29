@@ -1,0 +1,935 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dominican Republic Mortgage Calculator</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        :root {
+            --primary: #DF1783;
+            --primary-light: #f8a4d4;
+            --secondary: #2d3748;
+            --accent: #4fd1c5;
+            --text: #2d3748;
+            --text-light: #a0aec0;
+            --bg: #f7fafc;
+            --card-bg: #ffffff;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            --border-color: #e2e8f0;
+        }
+        .dark-mode {
+            --text: #f7fafc; 
+            --text-light: #a0aec0; 
+            --bg: #1a202c;
+            --card-bg: #2d3748; 
+            --shadow: 0 4px 6px -1px rgba(0,0,0,0.4), 0 2px 4px -1px rgba(0,0,0,0.2);
+            --border-color: #4a5568;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            background-color: var(--bg);
+            color: var(--text);
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 0;
+            border-bottom: 2px solid var(--primary);
+            margin-bottom: 30px;
+        }
+
+        .logo {
+            font-size: 24px;
+            font-weight: bold;
+            color: var(--primary);
+        }
+
+        .controls {
+            display: flex;
+            gap: 15px;
+        }
+
+        button {
+            padding: 10px 15px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        .btn-primary {
+            background-color: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: var(--secondary);
+        }
+
+        .btn-secondary {
+            background-color: var(--accent);
+            color: var(--secondary);
+        }
+
+        .btn-secondary:hover {
+            background-color: var(--primary-light);
+            color: var(--secondary);
+        }
+
+        .calculator-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+        }
+
+        @media (max-width: 900px) {
+            .calculator-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .input-section, .results-section {
+            background-color: var(--card-bg);
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: var(--shadow);
+        }
+
+        h2 {
+            color: var(--primary);
+            margin-bottom: 20px;
+            font-size: 22px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+
+        input, select {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+            font-size: 16px;
+            background-color: var(--card-bg);
+            color: var(--text);
+        }
+
+        .range-container {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .range-container input[type="range"] {
+            flex: 1;
+        }
+
+        .range-value {
+            min-width: 60px;
+            text-align: center;
+            font-weight: bold;
+            color: var(--primary);
+        }
+
+        .results-card {
+            background: linear-gradient(135deg, var(--primary-light), var(--primary));
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 25px;
+            text-align: center;
+        }
+
+        .monthly-payment {
+            font-size: 36px;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+
+        .results-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+
+        .result-item {
+            background-color: rgba(223, 23, 131, 0.1);
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .result-value {
+            font-size: 20px;
+            font-weight: bold;
+            color: var(--primary);
+        }
+
+        .chart-container {
+            height: 300px;
+            margin-bottom: 25px;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .language-es {
+            display: none;
+        }
+
+        body.spanish .language-en {
+            display: none;
+        }
+
+        body.spanish .language-es {
+            display: block;
+        }
+
+        /* Progress Bar Styles - UPDATED */
+        .progress-container {
+            margin: 30px 0;
+            padding: 15px 0;
+        }
+
+        .progress-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .progress-bar {
+            height: 5px; /* Thin progress bar */
+            background-color: var(--border-color);
+            border-radius: 3px;
+            overflow: visible;
+            position: relative;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--primary-light), var(--primary));
+            border-radius: 3px;
+            width: 0%;
+            transition: width 1s ease-in-out;
+            position: relative;
+        }
+
+        .progress-emoji {
+            position: absolute;
+            font-size: 30px; /* Larger emoji */
+            top: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 10;
+        }
+
+        /* Amortization Table Styles */
+        .amortization-container {
+            margin-top: 30px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .amortization-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .amortization-table th {
+            background-color: var(--primary);
+            color: white;
+            padding: 12px;
+            text-align: left;
+            position: sticky;
+            top: 0;
+        }
+
+        .amortization-table tr:nth-child(even) {
+            background-color: rgba(223, 23, 131, 0.05);
+        }
+
+        .amortization-table td {
+            padding: 10px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .amortization-table input[type="checkbox"] {
+            transform: scale(1.2);
+            accent-color: var(--primary);
+        }
+
+        /* Congratulations Section */
+        .congratulations {
+            text-align: center;
+            padding: 40px;
+            background: linear-gradient(135deg, var(--primary-light), var(--accent));
+            border-radius: 10px;
+            margin-top: 30px;
+            box-shadow: var(--shadow);
+            display: none;
+        }
+
+        .congratulations h2 {
+            color: white;
+            font-size: 32px;
+            margin-bottom: 20px;
+        }
+
+        .congratulations p {
+            font-size: 18px;
+            color: var(--secondary);
+            margin-bottom: 20px;
+        }
+
+        .confetti {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            background-color: var(--primary);
+            opacity: 0.7;
+        }
+
+        @keyframes confetti-fall {
+            0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+            100% { transform: translateY(100vh) rotate(360deg); opacity: 0; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="logo">DR Mortgage Calculator</div>
+            <div class="controls">
+                <button id="themeToggle" class="btn-secondary">🌙 Dark Mode</button>
+                <button id="languageToggle" class="btn-secondary">🇪🇸 Español</button>
+            </div>
+        </header>
+
+        <div class="calculator-grid">
+            <div class="input-section">
+                <h2 class="language-en">Loan Details</h2>
+                <h2 class="language-es">Detalles del Préstamo</h2>
+                
+                <div class="form-group">
+                    <label for="loanAmount" class="language-en">Loan Amount</label>
+                    <label for="loanAmount" class="language-es">Monto del Préstamo</label>
+                    <div class="range-container">
+                        <input type="range" id="loanAmountSlider" min="100000" max="10000000" step="100000" value="2500000">
+                        <span class="range-value" id="loanAmountValue">DOP$ 2,500,000</span>
+                    </div>
+                    <input type="hidden" id="loanAmount" value="2500000">
+                </div>
+                
+                <div class="form-group">
+                    <label for="interestRate" class="language-en">Interest Rate (% per year)</label>
+                    <label for="interestRate" class="language-es">Tasa de Interés (% anual)</label>
+                    <div class="range-container">
+                        <input type="range" id="interestRateSlider" min="1" max="20" step="0.1" value="12.1">
+                        <span class="range-value" id="interestRateValue">12.1%</span>
+                    </div>
+                    <input type="hidden" id="interestRate" value="12.1">
+                </div>
+                
+                <div class="form-group">
+                    <label for="loanTerm" class="language-en">Loan Term (years)</label>
+                    <label for="loanTerm" class="language-es">Plazo del Préstamo (años)</label>
+                    <div class="range-container">
+                        <input type="range" id="loanTermSlider" min="1" max="30" step="1" value="20">
+                        <span class="range-value" id="loanTermValue">20</span>
+                    </div>
+                    <input type="hidden" id="loanTerm" value="20">
+                </div>
+                
+                <div class="form-group">
+                    <label for="currency" class="language-en">Currency</label>
+                    <label for="currency" class="language-es">Moneda</label>
+                    <select id="currency">
+                        <option value="DOP">DOP - Dominican Peso</option>
+                        <option value="USD">USD - US Dollar</option>
+                    </select>
+                </div>
+                
+                <button id="calculateBtn" class="btn-primary language-en">Calculate</button>
+                <button id="calculateBtn" class="btn-primary language-es">Calcular</button>
+            </div>
+            
+            <div class="results-section">
+                <h2 class="language-en">Results</h2>
+                <h2 class="language-es">Resultados</h2>
+                
+                <div class="results-card">
+                    <div class="language-en">Monthly Payment</div>
+                    <div class="language-es">Pago Mensual</div>
+                    <div class="monthly-payment" id="monthlyPayment">DOP$ 27,425</div>
+                    <div class="language-en">Total of <span id="paymentNumber">240</span> payments</div>
+                    <div class="language-es">Total de <span id="paymentNumberEs">240</span> pagos</div>
+                </div>
+                
+                <div class="results-grid">
+                    <div class="result-item">
+                        <div class="language-en">Total Principal</div>
+                        <div class="language-es">Capital Total</div>
+                        <div class="result-value" id="totalPrincipal">DOP$ 2,500,000</div>
+                    </div>
+                    <div class="result-item">
+                        <div class="language-en">Total Interest</div>
+                        <div class="language-es">Interés Total</div>
+                        <div class="result-value" id="totalInterest">DOP$ 3,082,000</div>
+                    </div>
+                    <div class="result-item">
+                        <div class="language-en">Total Payment</div>
+                        <div class="language-es">Pago Total</div>
+                        <div class="result-value" id="totalPayment">DOP$ 5,582,000</div>
+                    </div>
+                    <div class="result-item">
+                        <div class="language-en">Payoff Date</div>
+                        <div class="language-es">Fecha de Pago Final</div>
+                        <div class="result-value" id="payoffDate">Jun 2043</div>
+                    </div>
+                </div>
+                
+                <!-- Progress Bar -->
+                <div class="progress-container">
+                    <div class="progress-header">
+                        <span class="language-en">Payment Progress</span>
+                        <span class="language-es">Progreso de Pagos</span>
+                    </div>
+                    <div class="progress-bar">
+                        <span style="position: absolute; left: 0; top: -35px; font-size: 30px;"> 📍 </span>
+                        <span style="position: absolute; right: 0; top: -30px; font-size: 30px;">🏠</span>
+                        <div class="progress-fill" id="progressFill" style="width: 0%">
+                            <div class="progress-emoji" id="progressEmoji">💸</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="chart-container">
+                    <canvas id="paymentChart"></canvas>
+                </div>
+                
+                <div class="action-buttons">
+                    <button id="showAmortizationBtn" class="btn-primary language-en">Show Amortization Table</button>
+                    <button id="showAmortizationBtn" class="btn-primary language-es">Mostrar Tabla de Amortización</button>
+                    <button id="exportPdfBtn" class="btn-secondary language-en">Export to PDF</button>
+                    <button id="exportPdfBtn" class="btn-secondary language-es">Exportar a PDF</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Amortization Table -->
+        <div id="amortizationTableSection" class="hidden">
+            <h2 class="language-en">Amortization Schedule</h2>
+            <h2 class="language-es">Calendario de Amortización</h2>
+            
+            <div class="amortization-container">
+                <table class="amortization-table">
+                    <thead>
+                        <tr>
+                            <th class="language-en">Month</th>
+                            <th class="language-es hidden">Mes</th>
+                            <th class="language-en">Payment</th>
+                            <th class="language-es hidden">Pago</th>
+                            <th class="language-en">Principal</th>
+                            <th class="language-es hidden">Principal</th>
+                            <th class="language-en">Interest</th>
+                            <th class="language-es hidden">Interés</th>
+                            <th class="language-en">Balance</th>
+                            <th class="language-es hidden">Balance</th>
+                            <th class="language-en">Paid</th>
+                            <th class="language-es hidden">Pagado</th>
+                        </tr>
+                    </thead>
+                    <tbody id="amortizationTable">
+                        <!-- Table will be generated here -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <!-- Congratulations Section -->
+        <div id="congratulationsSection" class="congratulations">
+            <h2 class="language-en">Congratulations! 🎉</h2>
+            <h2 class="language-es">¡Felicidades! 🎉</h2>
+            
+            <p class="language-en">You've successfully paid off your mortgage and now own your property!</p>
+            <p class="language-es">¡Ha pagado con éxito su hipoteca y ahora es propietario de su propiedad!</p>
+            
+            <div class="language-en">🏠 Home Sweet Home! 🏠</div>
+            <div class="language-es">🏠 ¡Hogar Dulce Hogar! 🏠</div>
+        </div>
+    </div>
+
+    <script>
+        // DOM elements
+        const themeToggle = document.getElementById('themeToggle');
+        const languageToggle = document.getElementById('languageToggle');
+        const calculateBtn = document.getElementById('calculateBtn');
+        const showAmortizationBtn = document.getElementById('showAmortizationBtn');
+        const exportPdfBtn = document.getElementById('exportPdfBtn');
+        
+        // Input sliders and values
+        const loanAmountSlider = document.getElementById('loanAmountSlider');
+        const loanAmountValue = document.getElementById('loanAmountValue');
+        const loanAmountInput = document.getElementById('loanAmount');
+        
+        const interestRateSlider = document.getElementById('interestRateSlider');
+        const interestRateValue = document.getElementById('interestRateValue');
+        const interestRateInput = document.getElementById('interestRate');
+        
+        const loanTermSlider = document.getElementById('loanTermSlider');
+        const loanTermValue = document.getElementById('loanTermValue');
+        const loanTermInput = document.getElementById('loanTerm');
+        
+        // Result elements
+        const monthlyPayment = document.getElementById('monthlyPayment');
+        const paymentNumber = document.getElementById('paymentNumber');
+        const paymentNumberEs = document.getElementById('paymentNumberEs');
+        const totalPrincipal = document.getElementById('totalPrincipal');
+        const totalInterest = document.getElementById('totalInterest');
+        const totalPayment = document.getElementById('totalPayment');
+        const payoffDate = document.getElementById('payoffDate');
+        
+        // Progress elements
+        const progressFill = document.getElementById('progressFill');
+        const progressEmoji = document.getElementById('progressEmoji');
+        
+        // Currency and language state
+        let currentCurrency = 'DOP';
+        let exchangeRate = 1;
+        let isSpanish = false;
+        let paidMonths = 0;
+        
+        // Initialize the page
+        document.addEventListener('DOMContentLoaded', function() {
+            // Set up event listeners
+            themeToggle.addEventListener('click', toggleTheme);
+            languageToggle.addEventListener('click', toggleLanguage);
+            calculateBtn.addEventListener('click', calculateMortgage);
+            showAmortizationBtn.addEventListener('click', showAmortizationTable);
+            exportPdfBtn.addEventListener('click', exportToPdf);
+            
+            // Set up slider events
+            loanAmountSlider.addEventListener('input', updateLoanAmountValue);
+            interestRateSlider.addEventListener('input', updateInterestRateValue);
+            loanTermSlider.addEventListener('input', updateLoanTermValue);
+            
+            // Set up currency selector
+            document.getElementById('currency').addEventListener('change', function(e) {
+                currentCurrency = e.target.value;
+                updateExchangeRate();
+            });
+            
+            // Initial calculation
+            calculateMortgage();
+            updateExchangeRate();
+            
+            // Load saved payment progress
+            loadPaymentProgress();
+        });
+        
+        // Update exchange rate (simulated API call)
+        function updateExchangeRate() {
+            // In a real implementation, this would fetch from a currency API
+            // For this example, we'll use a fixed rate
+            exchangeRate = currentCurrency === 'USD' ? 0.018 : 1;
+            
+            // Update display with new currency
+            calculateMortgage();
+        }
+        
+        // Toggle between light and dark theme
+        function toggleTheme() {
+            document.body.classList.toggle('dark-mode');
+            themeToggle.textContent = document.body.classList.contains('dark-mode') ? '☀️ Light Mode' : '🌙 Dark Mode';
+        }
+        
+        // Toggle between English and Spanish
+        function toggleLanguage() {
+            document.body.classList.toggle('spanish');
+            languageToggle.textContent = document.body.classList.contains('spanish') ? '🇺🇸 English' : '🇪🇸 Español';
+            isSpanish = !isSpanish;
+            
+            // Update all dynamic text
+            calculateMortgage();
+            
+            // Update amortization table headers
+            updateAmortizationTableHeaders();
+        }
+        
+        // Update loan amount value from slider
+        function updateLoanAmountValue() {
+            const value = parseInt(loanAmountSlider.value);
+            loanAmountValue.textContent = formatCurrency(value, 'DOP');
+            loanAmountInput.value = value;
+        }
+        
+        // Update interest rate value from slider
+        function updateInterestRateValue() {
+            const value = parseFloat(interestRateSlider.value);
+            interestRateValue.textContent = value.toFixed(1) + '%';
+            interestRateInput.value = value;
+        }
+        
+        // Update loan term value from slider
+        function updateLoanTermValue() {
+            const value = parseInt(loanTermSlider.value);
+            loanTermValue.textContent = value;
+            loanTermInput.value = value;
+        }
+        
+        // Format currency based on selected type
+        function formatCurrency(amount, currency) {
+            const formattedAmount = new Intl.NumberFormat().format(Math.round(amount));
+            
+            if (currency === 'USD') {
+                return '$' + formattedAmount;
+            } else {
+                return 'DOP$ ' + formattedAmount;
+            }
+        }
+        
+        // Calculate mortgage details
+        function calculateMortgage() {
+            const principal = parseFloat(loanAmountInput.value);
+            const interestRate = parseFloat(interestRateInput.value) / 100 / 12; // Monthly interest rate
+            const payments = parseFloat(loanTermInput.value) * 12; // Total number of payments
+            
+            // Calculate monthly payment
+            const x = Math.pow(1 + interestRate, payments);
+            const monthly = (principal * x * interestRate) / (x - 1);
+            
+            // Update results
+            monthlyPayment.textContent = formatCurrency(monthly * exchangeRate, currentCurrency);
+            paymentNumber.textContent = payments;
+            paymentNumberEs.textContent = payments;
+            
+            const totalPrincipalValue = principal * exchangeRate;
+            const totalInterestValue = (monthly * payments - principal) * exchangeRate;
+            const totalPaymentValue = (monthly * payments) * exchangeRate;
+            
+            totalPrincipal.textContent = formatCurrency(totalPrincipalValue, currentCurrency);
+            totalInterest.textContent = formatCurrency(totalInterestValue, currentCurrency);
+            totalPayment.textContent = formatCurrency(totalPaymentValue, currentCurrency);
+            
+            // Calculate payoff date
+            const today = new Date();
+            const payoffDateObj = new Date();
+            payoffDateObj.setFullYear(today.getFullYear() + parseInt(loanTermInput.value));
+            payoffDate.textContent = payoffDateObj.toLocaleDateString(isSpanish ? 'es-ES' : 'en-US', { 
+                year: 'numeric', 
+                month: 'short' 
+            });
+            
+            // Update chart
+            updateChart(principal * exchangeRate, totalInterestValue);
+            
+            // Update progress bar
+            updateProgressBar();
+        }
+        
+        // Update the payment breakdown chart
+        function updateChart(principal, interest) {
+            const ctx = document.getElementById('paymentChart').getContext('2d');
+            
+            // Destroy existing chart if it exists
+            if (window.paymentChartInstance) {
+                window.paymentChartInstance.destroy();
+            }
+            
+            // Create new chart
+            window.paymentChartInstance = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: [
+                        isSpanish ? 'Capital' : 'Principal',
+                        isSpanish ? 'Interés' : 'Interest'
+                    ],
+                    datasets: [{
+                        data: [principal, interest],
+                        backgroundColor: [
+                            '#DF1783',
+                            '#4fd1c5'
+                        ],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return context.label + ': ' + formatCurrency(context.raw, currentCurrency);
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        // Update amortization table headers based on language
+        function updateAmortizationTableHeaders() {
+            const headers = document.querySelectorAll('.amortization-table th');
+            headers.forEach(header => {
+                if (header.classList.contains('language-en')) {
+                    header.style.display = isSpanish ? 'none' : 'table-cell';
+                } else if (header.classList.contains('language-es')) {
+                    header.style.display = isSpanish ? 'table-cell' : 'none';
+                }
+            });
+        }
+        
+        // Show amortization table
+        function showAmortizationTable() {
+            const principal = parseFloat(loanAmountInput.value);
+            const interestRate = parseFloat(interestRateInput.value) / 100 / 12;
+            const payments = parseFloat(loanTermInput.value) * 12;
+            
+            // Calculate monthly payment
+            const x = Math.pow(1 + interestRate, payments);
+            const monthlyPaymentValue = (principal * x * interestRate) / (x - 1);
+            
+            let balance = principal;
+            let tableHTML = '';
+            
+            for (let month = 1; month <= payments; month++) {
+                const interestPayment = balance * interestRate;
+                const principalPayment = monthlyPaymentValue - interestPayment;
+                balance -= principalPayment;
+                
+                if (balance < 0) balance = 0;
+                
+                // Format for display with currency conversion
+                const displayMonthly = monthlyPaymentValue * exchangeRate;
+                const displayPrincipal = principalPayment * exchangeRate;
+                const displayInterest = interestPayment * exchangeRate;
+                const displayBalance = balance * exchangeRate;
+                
+                // Check if this month is already paid
+                const isChecked = month <= paidMonths ? 'checked' : '';
+                
+                tableHTML += `
+                    <tr>
+                        <td>${month}</td>
+                        <td class="language-es hidden">${month}</td>
+                        <td>${formatCurrency(displayMonthly, currentCurrency)}</td>
+                        <td class="language-es hidden">${formatCurrency(displayMonthly, currentCurrency)}</td>
+                        <td>${formatCurrency(displayPrincipal, currentCurrency)}</td>
+                        <td class="language-es hidden">${formatCurrency(displayPrincipal, currentCurrency)}</td>
+                        <td>${formatCurrency(displayInterest, currentCurrency)}</td>
+                        <td class="language-es hidden">${formatCurrency(displayInterest, currentCurrency)}</td>
+                        <td>${formatCurrency(displayBalance, currentCurrency)}</td>
+                        <td class="language-es hidden">${formatCurrency(displayBalance, currentCurrency)}</td>
+                        <td><input type="checkbox" data-month="${month}" ${isChecked} onchange="updatePaymentProgress(this)"></td>
+                        <td class="language-es hidden"><input type="checkbox" data-month="${month}" ${isChecked} onchange="updatePaymentProgress(this)"></td>
+                    </tr>
+                `;
+                
+                if (balance <= 0) break;
+            }
+            
+            document.getElementById('amortizationTable').innerHTML = tableHTML;
+            document.getElementById('amortizationTableSection').classList.remove('hidden');
+            
+            // Update table headers based on language
+            updateAmortizationTableHeaders();
+            
+            // Update progress bar
+            updateProgressBar();
+        }
+        
+        // Update payment progress when checkboxes are checked
+        function updatePaymentProgress(checkbox) {
+            const month = parseInt(checkbox.dataset.month);
+            
+            if (checkbox.checked && month > paidMonths) {
+                paidMonths = month;
+            } else if (!checkbox.checked && month === paidMonths) {
+                // Find the highest checked month
+                const checkboxes = document.querySelectorAll('input[type="checkbox"]');
+                let highestChecked = 0;
+                
+                checkboxes.forEach(cb => {
+                    if (cb.checked) {
+                        const cbMonth = parseInt(cb.dataset.month);
+                        if (cbMonth > highestChecked) highestChecked = cbMonth;
+                    }
+                });
+                
+                paidMonths = highestChecked;
+            }
+            
+            // Save progress to localStorage
+            localStorage.setItem('mortgagePaymentProgress', paidMonths);
+            
+            // Update progress bar
+            updateProgressBar();
+            
+            // Check if mortgage is fully paid
+            const totalPayments = parseInt(loanTermInput.value) * 12;
+            if (paidMonths >= totalPayments) {
+                showCongratulations();
+            }
+        }
+        
+        // Load payment progress from localStorage
+        function loadPaymentProgress() {
+            const savedProgress = localStorage.getItem('mortgagePaymentProgress');
+            if (savedProgress !== null) {
+                paidMonths = parseInt(savedProgress);
+            }
+        }
+        
+        // Update progress bar
+        function updateProgressBar() {
+            const totalPayments = parseInt(loanTermInput.value) * 12;
+            const progressPercent = Math.min(100, (paidMonths / totalPayments) * 100);
+            
+            progressFill.style.width = `${progressPercent}%`;
+            
+            // Position the emoji at the end of the progress
+            const emojiPosition = Math.min(progressPercent, 100);
+            progressEmoji.style.left = `${emojiPosition}%`;
+            
+            // Change emoji based on progress
+            if (progressPercent >= 100) {
+                progressEmoji.textContent = '🏠';
+                showCongratulations();
+            } else if (progressPercent >= 50) {
+                progressEmoji.textContent = '💰';
+            } else {
+                progressEmoji.textContent = '💸';
+            }
+        }
+        
+        // Show congratulations with confetti
+        function showCongratulations() {
+            const congratsSection = document.getElementById('congratulationsSection');
+            congratsSection.style.display = 'block';
+            
+            // Create confetti effect
+            createConfetti();
+        }
+        
+        // Create confetti animation
+        function createConfetti() {
+            const container = document.querySelector('.container');
+            const colors = ['#DF1783', '#4fd1c5', '#f8a4d4', '#2d3748', '#ffffff'];
+            
+            for (let i = 0; i < 50; i++) {
+                const confetti = document.createElement('div');
+                confetti.className = 'confetti';
+                confetti.style.left = Math.random() * 100 + '%';
+                confetti.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+                confetti.style.width = (5 + Math.random() * 10) + 'px';
+                confetti.style.height = (5 + Math.random() * 10) + 'px';
+                confetti.style.animation = `confetti-fall ${1 + Math.random() * 4}s linear forwards`;
+                
+                container.appendChild(confetti);
+                
+                // Remove confetti after animation completes
+                setTimeout(() => {
+                    confetti.remove();
+                }, 5000);
+            }
+        }
+        
+        // Export to PDF
+        function exportToPdf() {
+            // Using html2canvas and jsPDF libraries
+            const { jsPDF } = window.jspdf;
+            
+            // Create a new PDF instance
+            const doc = new jsPDF();
+            
+            // Add title
+            doc.setFontSize(20);
+            doc.setTextColor(223, 23, 131);
+            doc.text(isSpanish ? 'Calculadora de Hipoteca - República Dominicana' : 'Mortgage Calculator - Dominican Republic', 105, 15, { align: 'center' });
+            
+            // Add current date
+            doc.setFontSize(12);
+            doc.setTextColor(45, 55, 72);
+            const today = new Date();
+            doc.text(today.toLocaleDateString(isSpanish ? 'es-ES' : 'en-US'), 105, 22, { align: 'center' });
+            
+            // Add summary section
+            doc.setFontSize(16);
+            doc.setTextColor(223, 23, 131);
+            doc.text(isSpanish ? 'Resumen del Préstamo' : 'Loan Summary', 20, 35);
+            
+            doc.setFontSize(12);
+            doc.setTextColor(45, 55, 72);
+            doc.text((isSpanish ? 'Pago Mensual: ' : 'Monthly Payment: ') + monthlyPayment.textContent, 20, 45);
+            doc.text((isSpanish ? 'Plazo del Préstamo: ' : 'Loan Term: ') + loanTermInput.value + (isSpanish ? ' años' : ' years'), 20, 52);
+            doc.text((isSpanish ? 'Monto del Préstamo: ' : 'Loan Amount: ') + formatCurrency(loanAmountInput.value * exchangeRate, currentCurrency), 20, 59);
+            doc.text((isSpanish ? 'Tasa de Interés: ' : 'Interest Rate: ') + interestRateInput.value + '%', 20, 66);
+            doc.text((isSpanish ? 'Interés Total: ' : 'Total Interest: ') + totalInterest.textContent, 20, 73);
+            doc.text((isSpanish ? 'Pago Total: ' : 'Total Payment: ') + totalPayment.textContent, 20, 80);
+            doc.text((isSpanish ? 'Fecha de Pago Final: ' : 'Payoff Date: ') + payoffDate.textContent, 20, 87);
+            
+            // Add chart image (simplified representation)
+            doc.setFillColor(223, 23, 131);
+            doc.circle(150, 50, 20, 'F');
+            doc.setFillColor(79, 209, 197);
+            doc.circle(150, 50, 15, 'F');
+            
+            doc.setFontSize(10);
+            doc.setTextColor(45, 55, 72);
+            doc.text(isSpanish ? 'Capital: ' + totalPrincipal.textContent : 'Principal: ' + totalPrincipal.textContent, 140, 85);
+            doc.text(isSpanish ? 'Interés: ' + totalInterest.textContent : 'Interest: ' + totalInterest.textContent, 140, 90);
+            
+            // Add a note about the Dominican Republic context
+            doc.setFontSize(11);
+            doc.setTextColor(100, 100, 100);
+            doc.text(isSpanish ? 
+                '* Calculadora diseñada para el mercado hipotecario de la República Dominicana. Tasas típicas: 8-13% para residentes.' :
+                '* Calculator designed for the Dominican Republic mortgage market. Typical rates: 8-13% for residents.', 
+                20, 100, { maxWidth: 170 });
+            
+            // Save the PDF
+            doc.save(isSpanish ? 'Calculadora-Hipoteca-RD.pdf' : 'DR-Mortgage-Calculator.pdf');
+        }
+    </script>
+</body>
+</html>
