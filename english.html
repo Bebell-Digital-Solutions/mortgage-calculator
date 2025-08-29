@@ -1,0 +1,1070 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dominican Republic Mortgage Calculator</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary: #DF1783;
+            --primary-light: #f8a4d4;
+            --secondary: #2d3748;
+            --accent: #4fd1c5;
+            --text: #2d3748;
+            --text-light: #a0aec0;
+            --bg: #f7fafc;
+            --card-bg: #ffffff;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            --border-color: #e2e8f0;
+            --status-paid: #28a745;
+            --status-due: #ffc107;
+            --status-late: #dc3545;
+        }
+        .dark-mode {
+            --text: #f7fafc;
+            --text-light: #a0aec0;
+            --bg: #1a202c;
+            --card-bg: #2d3748;
+            --shadow: 0 4px 6px -1px rgba(0,0,0,0.4), 0 2px 4px -1px rgba(0,0,0,0.2);
+            --border-color: #4a5568;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            background-color: var(--bg);
+            color: var(--text);
+            padding-top: 100px; /* Space for the fixed top menu */
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        /* Top Menu Bar Styles */
+        .top-menu-bar {
+            position: fixed; top: 1rem; left: 50%; transform: translateX(-50%);
+            width: calc(100% - 2rem); max-width: 1200px; z-index: 1100;
+            background-color: var(--card-bg); box-shadow: var(--shadow);
+            border: 1px solid var(--border-color); border-radius: 12px;
+            padding: 0 1.5rem; transition: top 0.3s ease-in-out;
+        }
+        .top-menu-content { height: 70px; display: flex; align-items: center; justify-content: space-between; }
+        .logo-container { display: flex; align-items: center; gap: 1rem; }
+        #appLogo { height: 40px; width: 40px; object-fit: cover; border-radius: 8px; }
+        #appBrandNameDisplay {
+            font-size: 16px; /* Mobile First */
+            font-weight: 600;
+            color: var(--text);
+        }
+        .top-menu-actions {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            overflow-x: auto; /* Allow horizontal scroll on mobile */
+            white-space: nowrap; /* Prevent buttons from wrapping */
+            -ms-overflow-style: none;  /* IE and Edge */
+            scrollbar-width: none;  /* Firefox */
+        }
+        .top-menu-actions::-webkit-scrollbar {
+            display: none; /* Hide scrollbar for WebKit browsers */
+        }
+        #dateTimeDisplay {
+             display: none; /* Hidden on mobile by default */
+             font-size: 0.9rem;
+             color: var(--text-light);
+             text-align: right;
+             margin-right: 1rem;
+        }
+        .fab {
+            width: 40px; height: 40px; border-radius: 50%; background-color: var(--bg);
+            color: var(--text); border: 1px solid var(--border-color); display: flex;
+            justify-content: center; align-items: center; cursor: pointer; transition: all 0.2s ease;
+        }
+        .fab:hover { background-color: var(--border-color); }
+
+        @media (min-width: 768px) {
+            #appBrandNameDisplay {
+                font-size: 20px; /* Larger font on desktop */
+            }
+            .top-menu-actions {
+                overflow-x: visible; /* Disable scroll on desktop */
+            }
+            #dateTimeDisplay {
+                display: block; /* Show date/time on desktop */
+            }
+        }
+
+        .calculator-grid, .timer-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+        }
+
+        @media (max-width: 900px) {
+            .calculator-grid, .timer-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .input-section, .results-section, .timer-section, .amortization-section {
+            background-color: var(--card-bg);
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: var(--shadow);
+        }
+
+        h2 {
+            color: var(--primary);
+            margin-bottom: 20px;
+            font-size: 22px;
+        }
+
+        .form-group { margin-bottom: 20px; }
+        label { display: block; margin-bottom: 8px; font-weight: 500; }
+        input, select, textarea {
+            width: 100%; padding: 12px; border: 1px solid var(--border-color);
+            border-radius: 5px; font-size: 16px; background-color: var(--bg); color: var(--text);
+        }
+        
+        button {
+            padding: 10px 15px; border: none; border-radius: 5px;
+            cursor: pointer; font-weight: 600;
+        }
+
+        .btn-primary {
+            background-color: var(--primary); color: white; width: 100%;
+            padding: 15px; font-size: 16px;
+        }
+        .btn-primary:hover { opacity: 0.9; }
+        .btn-secondary { background-color: var(--accent); color: var(--secondary); }
+        .btn-secondary:hover { background-color: var(--primary-light); color: var(--secondary); }
+        .btn-danger { background-color: #e53e3e; color: white; }
+        .btn-danger:hover { background-color: #c53030; }
+
+        /* Modal Styles */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background-color: rgba(0, 0, 0, 0.6); display: flex;
+            justify-content: center; align-items: center; z-index: 2000;
+        }
+        .modal-content {
+            background-color: var(--card-bg); padding: 30px; border-radius: 10px;
+            width: 90%; max-width: 500px; box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            position: relative;
+        }
+        .modal-content h2 { text-align: center; }
+        .form-switch { text-align: center; margin-top: 15px; }
+        .form-switch a { color: var(--primary); cursor: pointer; text-decoration: underline;}
+
+        /* Floating language toggle for modal */
+        .modal-lang-toggle { position: absolute; top: 20px; right: 20px; z-index: 2010; }
+
+        /* Multi-select dropdown */
+        .multiselect { display: none; }
+        .multiselect-label { display: block; width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 5px; background-color: var(--bg); cursor: pointer; }
+        .multiselect-options { display: none; border: 1px solid var(--border-color); border-radius: 5px; max-height: 150px; overflow-y: auto; }
+        .multiselect-options label { display: block; padding: 10px; cursor: pointer; }
+        .multiselect-options label:hover { background-color: var(--border-color); }
+        
+        .hidden { display: none; }
+        
+        /* Calculator Specific Styles */
+        .range-container { display: flex; align-items: center; gap: 15px; }
+        .range-container input[type="range"] { flex: 1; }
+        .range-value { min-width: 80px; text-align: center; font-weight: bold; color: var(--primary); }
+        .results-card { background: linear-gradient(135deg, var(--primary-light), var(--primary)); color: white; padding: 20px; border-radius: 10px; margin-bottom: 25px; text-align: center; }
+        .monthly-payment { font-size: 36px; font-weight: bold; margin: 10px 0; }
+        .results-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 25px; }
+        .result-item { background-color: rgba(223, 23, 131, 0.1); padding: 15px; border-radius: 8px; text-align: center; }
+        .result-value { font-size: 20px; font-weight: bold; color: var(--primary); }
+        .chart-container { height: 300px; margin-bottom: 25px; }
+        .action-buttons { display: flex; gap: 15px; justify-content: center; flex-wrap: wrap; }
+        .amortization-container { margin-top: 20px; max-height: 400px; overflow-y: auto; }
+        .amortization-table { width: 100%; border-collapse: collapse; }
+        .amortization-table th { background-color: var(--primary); color: white; padding: 12px; text-align: left; position: sticky; top: 0; }
+        .amortization-table tr:nth-child(even) { background-color: rgba(223, 23, 131, 0.05); }
+        .amortization-table td { padding: 10px; border-bottom: 1px solid var(--border-color); }
+
+        /* Image with Quote Styles */
+        .image-container {
+            position: relative;
+            margin-top: 20px;
+        }
+        .image-container img {
+            display: block;
+            width: 100%;
+            border-radius: 10px;
+        }
+        .image-quote {
+            position: absolute;
+            top: 20%;
+            left: 15px;
+            right: 15px;
+            color: black;
+            text-shadow: none;
+            font-size: 25px;
+            font-weight: 500;
+            font-style: italic;
+            text-align: center;
+            z-index: 1;
+        }
+
+
+        /* Calendar View Styles */
+        #calendarView {
+            background-color: var(--card-bg); padding: 25px;
+            border-radius: 10px; box-shadow: var(--shadow); margin-top: 30px;
+        }
+        .calendar-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .calendar-header button { background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--primary); }
+        #calendarGrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; }
+        .month-container { border: 1px solid var(--border-color); border-radius: 8px; padding: 10px; }
+        .month-header { text-align: center; font-weight: bold; color: var(--primary); margin-bottom: 10px; }
+        .days-header { display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; font-size: 0.8em; color: var(--text-light); }
+        .days-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+        .day-cell { min-height: 40px; text-align: center; font-size: 0.8em; padding-top: 5px; }
+        .day-cell.other-month { color: var(--text-light); }
+        .payment-event {
+            font-size: 0.7em; padding: 2px 4px; border-radius: 4px;
+            color: white; margin-top: 2px; white-space: nowrap;
+            overflow: hidden; text-overflow: ellipsis; cursor: pointer;
+        }
+        .payment-status-paid { background-color: var(--status-paid); }
+        .payment-status-due { background-color: var(--status-due); }
+        .payment-status-late { background-color: var(--status-late); }
+
+        /* Timer View Styles */
+        .timer-actions { display: flex; gap: 10px; margin-top: 20px; flex-wrap: wrap; }
+        #timersList { list-style: none; padding: 0; }
+        #timersList li { background-color: var(--bg); padding: 15px; border-radius: 8px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+
+        /* Toast Notification */
+        .toast {
+            position: fixed;
+            bottom: -100px; /* Start hidden */
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: var(--secondary);
+            color: white;
+            padding: 15px 25px;
+            border-radius: 8px;
+            z-index: 3000;
+            opacity: 0;
+            transition: opacity 0.3s ease, bottom 0.3s ease;
+        }
+        .toast.show {
+            bottom: 30px;
+            opacity: 1;
+        }
+
+    </style>
+</head>
+<body>
+
+    <!-- Login/Registration Modal -->
+    <div id="userModal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <div class="fab modal-lang-toggle" id="modalLangToggle" title="Toggle Language"><i class="fas fa-globe"></i></div>
+            <form id="loginForm">
+                <h2 data-lang-key="login">Login</h2>
+                <div class="form-group">
+                    <label for="loginEmail" data-lang-key="email">Email Address</label>
+                    <input type="email" id="loginEmail" required>
+                </div>
+                <div class="form-group">
+                    <label for="loginPassword" data-lang-key="password">Password</label>
+                    <input type="password" id="loginPassword" required>
+                </div>
+                <button type="submit" class="btn-primary" data-lang-key="login">Login</button>
+                <p class="form-switch" data-lang-key="noAccount">Don't have an account? <a id="showRegister">Register</a></p>
+            </form>
+            <form id="registerForm" class="hidden">
+                <h2 data-lang-key="register">Register</h2>
+                <div class="form-group">
+                    <label for="fullName" data-lang-key="fullName">Full Name (Optional)</label>
+                    <input type="text" id="fullName">
+                </div>
+                <div class="form-group">
+                    <label for="email" data-lang-key="email">Email Address</label>
+                    <input type="email" id="email" required>
+                </div>
+                <div class="form-group">
+                    <label for="password" data-lang-key="password">Password</label>
+                    <input type="password" id="password" required>
+                </div>
+                <div class="form-group">
+                    <label data-lang-key="interests">Real Estate Interests</label>
+                    <div class="multiselect-container">
+                        <div class="multiselect-label" data-lang-key="selectInterests">Select interests...</div>
+                        <div class="multiselect-options">
+                            <label><input type="checkbox" class="multiselect" value="First Home"> <span data-lang-key="firstHome">First Time Home Buyer</span></label>
+                            <label><input type="checkbox" class="multiselect" value="Investment"> <span data-lang-key="investment">Investment Properties</span></label>
+                            <label><input type="checkbox" class="multiselect" value="Vacation Home"> <span data-lang-key="vacationHome">Vacation Home</span></label>
+                            <label><input type="checkbox" class="multiselect" value="Commercial"> <span data-lang-key="commercial">Commercial Real Estate</span></label>
+                             <label><input type="checkbox" class="multiselect" value="Land"> <span data-lang-key="land">Land/Lot Purchase</span></label>
+                        </div>
+                    </div>
+                </div>
+                <button type="submit" class="btn-primary" data-lang-key="register">Register</button>
+                <p class="form-switch" data-lang-key="hasAccount">Already have an account? <a id="showLogin">Login</a></p>
+            </form>
+        </div>
+    </div>
+
+    <!-- Top Menu Bar -->
+    <div class="top-menu-bar">
+        <div class="top-menu-content">
+            <div class="logo-container">
+                <img id="appLogo" src="https://bucket.mlcdn.com/a/3336/3336910/images/fa62e06dd2b6ed2d1d9e77e5dd944bef2904d5d1.png" alt="App Logo">
+                <span id="appBrandNameDisplay">Easy Listings</span>
+            </div>
+            <div class="top-menu-actions">
+                <div id="dateTimeDisplay"></div>
+                <div class="fab" id="langToggle" title="Toggle Language"><i class="fas fa-globe"></i></div>
+                <div class="fab" id="calculatorNavBtn" title="Calculator"><i class="fas fa-calculator"></i></div>
+                <!-- User-specific buttons, hidden by default -->
+                <div class="fab hidden" id="calendarBtn" title="Calendar View"><i class="fas fa-calendar-alt"></i></div>
+                <div class="fab hidden" id="timerBtn" title="Timers"><i class="fas fa-clock"></i></div>
+                <div class="fab" id="supportBtn" title="Support" onclick="window.open('https://helpcenter.easylistings.website', '_blank')"><i class="fa fa-info-circle"></i></div>
+                <div class="fab" id="darkModeToggle" title="Toggle Theme"><i class="fas fa-moon"></i></div>
+                 <!-- Login/Logout buttons -->
+                <div class="fab" id="loginNavBtn" title="Login"><i class="fas fa-sign-in-alt"></i></div>
+                <div class="fab hidden" id="logoutBtn" title="Logout"><i class="fas fa-sign-out-alt"></i></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- Calculator View -->
+        <div id="calculatorView">
+             <div class="calculator-grid">
+                <div class="input-section">
+                    <h2 data-lang-key="loanDetails">Loan Details</h2>
+                    <div class="form-group">
+                        <label for="loanAmount" data-lang-key="loanAmount">Loan Amount</label>
+                        <div class="range-container">
+                            <input type="range" id="loanAmountSlider" min="100000" max="10000000" step="100000" value="2500000">
+                            <span class="range-value" id="loanAmountValue">DOP$ 2,500,000</span>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="interestRate" data-lang-key="interestRate">Interest Rate (% per year)</label>
+                        <div class="range-container">
+                            <input type="range" id="interestRateSlider" min="1" max="20" step="0.1" value="12.1">
+                            <span class="range-value" id="interestRateValue">12.1%</span>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="loanTerm" data-lang-key="loanTerm">Loan Term (years)</label>
+                        <div class="range-container">
+                            <input type="range" id="loanTermSlider" min="1" max="30" step="1" value="20">
+                            <span class="range-value" id="loanTermValue">20</span>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="loanStartDate" data-lang-key="loanStartDate">Loan Start Date</label>
+                        <input type="date" id="loanStartDate">
+                    </div>
+                    <div class="form-group">
+                        <label for="currency" data-lang-key="currency">Currency</label>
+                        <select id="currency">
+                            <option value="DOP">DOP - Dominican Peso</option>
+                            <option value="USD">USD - US Dollar</option>
+                        </select>
+                    </div>
+                    <button id="calculateBtn" class="btn-primary" data-lang-key="calculate">Calculate</button>
+                    
+                    <div class="image-container">
+                        <img src="https://bucket.mlcdn.com/a/3336/3336910/images/5766605da687e128a40ce24693abaf0597694c2c.png" alt="Inspirational Image">
+                        <p id="inspirationalQuote" class="image-quote"></p>
+                    </div>
+                </div>
+                
+                <div class="results-section">
+                    <h2 data-lang-key="results">Results</h2>
+                    <div class="results-card">
+                        <div data-lang-key="monthlyPayment">Monthly Payment</div>
+                        <div class="monthly-payment" id="monthlyPaymentResult">DOP$ 27,425</div>
+                        <div><span data-lang-key="totalOf">Total of</span> <span id="paymentNumber">240</span> <span data-lang-key="payments">payments</span></div>
+                    </div>
+                    <div class="results-grid">
+                        <div class="result-item">
+                            <div data-lang-key="totalPrincipal">Total Principal</div>
+                            <div class="result-value" id="totalPrincipalResult">DOP$ 2,500,000</div>
+                        </div>
+                        <div class="result-item">
+                            <div data-lang-key="totalInterest">Total Interest</div>
+                            <div class="result-value" id="totalInterestResult">DOP$ 3,082,000</div>
+                        </div>
+                         <div class="result-item">
+                            <div data-lang-key="totalPayment">Total Payment</div>
+                            <div class="result-value" id="totalPaymentResult">DOP$ 5,582,000</div>
+                        </div>
+                        <div class="result-item">
+                            <div data-lang-key="payoffDate">Payoff Date</div>
+                            <div class="result-value" id="payoffDateResult">Jun 2044</div>
+                        </div>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="paymentChart"></canvas>
+                    </div>
+                    <div class="action-buttons">
+                        <button id="showAmortizationBtn" class="btn-secondary" data-lang-key="showAmortization">Show Amortization</button>
+                        <button id="exportPdfBtn" class="btn-secondary" data-lang-key="exportPdf">Export to PDF</button>
+                        <button id="saveCalculationBtn" class="btn-secondary" data-lang-key="saveCalculation"><i class="fas fa-bookmark"></i>&nbsp; Save</button>
+                    </div>
+                </div>
+            </div>
+            <div id="amortizationSection" class="amortization-section hidden" style="margin-top: 30px;">
+                <h2 data-lang-key="amortizationSchedule">Amortization Schedule</h2>
+                <div class="amortization-container">
+                    <table class="amortization-table">
+                        <thead>
+                            <tr>
+                                <th data-lang-key="month">Month</th>
+                                <th data-lang-key="payment">Payment</th>
+                                <th data-lang-key="principal">Principal</th>
+                                <th data-lang-key="interest">Interest</th>
+                                <th data-lang-key="balance">Balance</th>
+                            </tr>
+                        </thead>
+                        <tbody id="amortizationTableBody">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Calendar View -->
+        <div id="calendarView" class="hidden">
+            <h2 data-lang-key="paymentCalendar">Payment Calendar</h2>
+            <div class="calendar-header">
+                <button id="prevYearBtn"><i class="fas fa-chevron-left"></i></button>
+                <h3 id="calendarYear">2024</h3>
+                <button id="nextYearBtn"><i class="fas fa-chevron-right"></i></button>
+            </div>
+            <div id="calendarGrid"></div>
+            <div class="timer-actions">
+                 <button id="syncGoogleCalendarBtn" class="btn-secondary" data-lang-key="syncGoogle">Sync with Google Calendar</button>
+                 <button id="downloadIcalBtn" class="btn-secondary" data-lang-key="downloadIcal">Download iCal File</button>
+            </div>
+        </div>
+
+        <!-- Timer View -->
+        <div id="timerView" class="hidden">
+            <div class="timer-grid">
+                <div class="timer-section">
+                    <h2 data-lang-key="manageTimers">Manage Timers</h2>
+                    <ul id="timersList"></ul>
+                </div>
+                <div class="timer-section">
+                    <h2 data-lang-key="addTimer">Add New Timer</h2>
+                    <form id="addTimerForm">
+                        <div class="form-group">
+                            <label for="timerName" data-lang-key="loanName">Loan/Purchase Name</label>
+                            <input type="text" id="timerName" required>
+                        </div>
+                        <div class="form-group">
+                             <label for="timerLoanAmount" data-lang-key="loanAmount">Loan Amount</label>
+                            <input type="number" id="timerLoanAmount" required>
+                        </div>
+                         <div class="form-group">
+                            <label for="timerInterestRate" data-lang-key="interestRate">Interest Rate (%)</label>
+                            <input type="number" step="0.1" id="timerInterestRate" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="timerLoanTerm" data-lang-key="loanTerm">Loan Term (years)</label>
+                            <input type="number" id="timerLoanTerm" required>
+                        </div>
+                        <div class="form-group">
+                             <label for="timerPaymentStartDate" data-lang-key="paymentStart">Payment Start Date</label>
+                            <input type="date" id="timerPaymentStartDate" required>
+                        </div>
+                         <button type="submit" class="btn-primary" data-lang-key="addTimer">Add Timer</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div id="toast" class="toast hidden"></div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // --- GLOBAL DOM Elements ---
+            const userModal = document.getElementById('userModal');
+            const loginForm = document.getElementById('loginForm');
+            const registerForm = document.getElementById('registerForm');
+            const showRegister = document.getElementById('showRegister');
+            const showLogin = document.getElementById('showLogin');
+            const darkModeToggle = document.getElementById('darkModeToggle');
+            const langToggle = document.getElementById('langToggle');
+            const calculatorNavBtn = document.getElementById('calculatorNavBtn');
+            const calendarBtn = document.getElementById('calendarBtn');
+            const timerBtn = document.getElementById('timerBtn');
+            const loginNavBtn = document.getElementById('loginNavBtn');
+            const logoutBtn = document.getElementById('logoutBtn');
+            const calculatorView = document.getElementById('calculatorView');
+            const calendarView = document.getElementById('calendarView');
+            const timerView = document.getElementById('timerView');
+            const dateTimeDisplay = document.getElementById('dateTimeDisplay');
+            const multiselectLabel = document.querySelector('.multiselect-label');
+            const multiselectOptions = document.querySelector('.multiselect-options');
+            const modalLangToggle = document.getElementById('modalLangToggle');
+            const syncGoogleCalendarBtn = document.getElementById('syncGoogleCalendarBtn');
+            const downloadIcalBtn = document.getElementById('downloadIcalBtn');
+            const addTimerForm = document.getElementById('addTimerForm');
+            const timersList = document.getElementById('timersList');
+            const saveCalculationBtn = document.getElementById('saveCalculationBtn');
+            let currentCalendarYear = new Date().getFullYear();
+            
+            // --- Language Translations ---
+            const translations = {
+                es: {
+                    // Login/Register
+                    login: "Iniciar Sesión", email: "Correo Electrónico", password: "Contraseña",
+                    noAccount: "¿No tienes cuenta? ", register: "Regístrate", fullName: "Nombre Completo (Opcional)",
+                    interests: "Intereses Inmobiliarios", selectInterests: "Seleccionar intereses...",
+                    firstHome: "Comprador de Primera Vivienda", investment: "Propiedades de Inversión",
+                    vacationHome: "Casa de Vacaciones", commercial: "Bienes Raíces Comerciales",
+                    land: "Compra de Terreno/Lote", hasAccount: "¿Ya tienes una cuenta? ",
+                    // Calculator
+                    loanDetails: "Detalles del Préstamo", loanAmount: "Monto del Préstamo",
+                    interestRate: "Tasa de Interés (% anual)", loanTerm: "Plazo del Préstamo (años)",
+                    loanStartDate: "Fecha de Inicio del Préstamo",
+                    currency: "Moneda", calculate: "Calcular", results: "Resultados",
+                    monthlyPayment: "Pago Mensual", totalOf: "Total de", payments: "pagos",
+                    totalPrincipal: "Capital Total", totalInterest: "Interés Total",
+                    totalPayment: "Pago Total", payoffDate: "Fecha de Pago Final",
+                    showAmortization: "Mostrar Amortización", exportPdf: "Exportar a PDF",
+                    saveCalculation: "Guardar Cálculo",
+                    amortizationSchedule: "Calendario de Amortización", month: "Mes", payment: "Pago",
+                    principal: "Capital", interest: "Interés", balance: "Balance",
+                    // Calendar & Timer
+                    paymentCalendar: "Calendario de Pagos",
+                    calendarComingSoon: "Añada un préstamo/temporizador para ver las fechas de pago aquí. Luego puede sincronizar o descargar su calendario.",
+                    printCalendar: "Imprimir Calendario", manageTimers: "Administrar Temporizadores",
+                    addTimer: "Añadir Nuevo Temporizador", loanName: "Nombre del Préstamo/Compra",
+                    purchaseDate: "Fecha de Compra", paymentStart: "Fecha de Inicio de Pagos Recurrentes",
+                    syncGoogle: "Sincronizar con Google Calendar", downloadIcal: "Descargar Archivo iCal",
+                    addTimerFirst: "Por favor, añada un temporizador de préstamo primero.", timerAdded: "¡Temporizador añadido con éxito!",
+                    timers: "Temporizadores", calculator: "Calculadora",
+                    paid: "Pagado", due: "Pendiente", late: "Atrasado"
+                }
+            };
+
+            let currentLang = 'en';
+            let currentUser = null;
+
+            // --- CORE APP LOGIC ---
+
+            function showToast(message, duration = 3000) {
+                const toast = document.getElementById('toast');
+                toast.textContent = message;
+                toast.classList.remove('hidden');
+                toast.classList.add('show');
+                setTimeout(() => {
+                    toast.classList.remove('show');
+                }, duration);
+            }
+
+            function updateDateTime() {
+                if(!currentUser) return; // Only show for logged in users
+                const now = new Date();
+                const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' };
+                const locale = currentLang === 'es' ? 'es-DO' : 'en-US';
+                const formattedDateTime = now.toLocaleString(locale, { ...options, timeZone: 'America/Santo_Domingo' });
+                dateTimeDisplay.textContent = formattedDateTime;
+            }
+            
+            function toggleLanguage() {
+                currentLang = currentLang === 'en' ? 'es' : 'en';
+                const elements = document.querySelectorAll('[data-lang-key]');
+                elements.forEach(el => {
+                    const key = el.getAttribute('data-lang-key');
+                    const translation = currentLang === 'es' ? translations.es[key] : el.dataset.originalText;
+                    if(translation) el.textContent = translation;
+                });
+                updateDateTime();
+                calculateMortgage(); // Recalculate to update chart labels and dates
+                if (!calendarView.classList.contains('hidden')) {
+                    renderCalendar(currentCalendarYear);
+                }
+            }
+
+            function requireLogin() {
+                if (!currentUser) {
+                    userModal.classList.remove('hidden');
+                    return false;
+                }
+                return true;
+            }
+
+            function handleLogin(e) {
+                e.preventDefault();
+                const email = document.getElementById('loginEmail').value;
+                const password = document.getElementById('loginPassword').value;
+
+                if (email === 'BackendUser' && password === 'Passcode') {
+                     currentUser = { email: 'BackendUser', fullName: 'Admin', timers: [] };
+                     initAppForUser();
+                     return;
+                }
+                
+                const userData = JSON.parse(localStorage.getItem(`user_${email}`));
+                if (userData && userData.password === password) {
+                    currentUser = userData;
+                    if (!currentUser.timers) currentUser.timers = [];
+                    initAppForUser();
+                } else {
+                    alert('Invalid credentials!');
+                }
+            }
+
+            function handleRegistration(e) {
+                e.preventDefault();
+                const fullName = document.getElementById('fullName').value;
+                const email = document.getElementById('email').value;
+                const password = document.getElementById('password').value;
+                const selectedInterests = Array.from(document.querySelectorAll('.multiselect:checked')).map(el => el.value);
+
+                if (localStorage.getItem(`user_${email}`)) {
+                    alert('User already exists!');
+                    return;
+                }
+
+                const userData = { fullName, email, password, interests: selectedInterests, timers: [] };
+                localStorage.setItem(`user_${email}`, JSON.stringify(userData));
+                
+                const scriptURL = 'YOUR_GOOGLE_APPS_SCRIPT_URL_HERE'; 
+                if (scriptURL !== 'YOUR_GOOGLE_APPS_SCRIPT_URL_HERE') {
+                    const formData = new FormData();
+                    formData.append('fullName', fullName);
+                    formData.append('email', email);
+                    formData.append('interests', selectedInterests.join(', '));
+                    fetch(scriptURL, { method: 'POST', body: formData})
+                        .then(response => console.log('Success!', response))
+                        .catch(error => console.error('Error!', error.message));
+                }
+                currentUser = userData;
+                initAppForUser();
+            }
+
+            function initAppForUser() {
+                 userModal.classList.add('hidden');
+                 updateTopNavForLoginState();
+                 updateDateTime();
+                 setInterval(updateDateTime, 60000);
+                 loadTimers();
+                 switchView('calculatorView');
+            }
+            
+            function logout() {
+                currentUser = null;
+                location.reload(); 
+            }
+            
+            function updateTopNavForLoginState() {
+                const isLoggedIn = !!currentUser;
+                // Show/hide user specific buttons
+                calendarBtn.classList.toggle('hidden', !isLoggedIn);
+                timerBtn.classList.toggle('hidden', !isLoggedIn);
+                logoutBtn.classList.toggle('hidden', !isLoggedIn);
+                // Show/hide guest buttons
+                loginNavBtn.classList.toggle('hidden', isLoggedIn);
+            }
+
+            function switchView(viewName) {
+                if(viewName !== 'calculatorView' && !requireLogin()) return;
+
+                [calculatorView, calendarView, timerView].forEach(view => view.classList.add('hidden'));
+                document.getElementById(viewName).classList.remove('hidden');
+                
+                if (viewName === 'calendarView') {
+                    renderCalendar(currentCalendarYear);
+                }
+            }
+            
+            // --- CALCULATOR LOGIC ---
+            let monthlyPaymentResult, totalPrincipalResult, totalInterestResult, totalPaymentResult, payoffDateResult;
+            let loanAmountSlider, loanAmountValue, interestRateSlider, interestRateValue, loanTermSlider, loanTermValue, loanStartDateInput, currencySelect;
+            let paymentChartInstance;
+
+            function initializeCalculator() {
+                // DOM Elements
+                loanAmountSlider = document.getElementById('loanAmountSlider');
+                loanAmountValue = document.getElementById('loanAmountValue');
+                interestRateSlider = document.getElementById('interestRateSlider');
+                interestRateValue = document.getElementById('interestRateValue');
+                loanTermSlider = document.getElementById('loanTermSlider');
+                loanTermValue = document.getElementById('loanTermValue');
+                loanStartDateInput = document.getElementById('loanStartDate');
+                currencySelect = document.getElementById('currency');
+                monthlyPaymentResult = document.getElementById('monthlyPaymentResult');
+                totalPrincipalResult = document.getElementById('totalPrincipalResult');
+                totalInterestResult = document.getElementById('totalInterestResult');
+                totalPaymentResult = document.getElementById('totalPaymentResult');
+                payoffDateResult = document.getElementById('payoffDateResult');
+
+                // Set default start date to today
+                loanStartDateInput.valueAsDate = new Date();
+
+                // Event Listeners
+                const inputs = [loanAmountSlider, interestRateSlider, loanTermSlider, loanStartDateInput, currencySelect];
+                inputs.forEach(input => input.addEventListener('input', calculateMortgage));
+                inputs.forEach(input => input.addEventListener('change', calculateMortgage));
+                
+                document.getElementById('calculateBtn').addEventListener('click', updateInspirationalQuote);
+                saveCalculationBtn.addEventListener('click', handleSaveCalculation);
+
+                document.getElementById('showAmortizationBtn').addEventListener('click', () => {
+                    if (requireLogin()) generateAmortizationTable();
+                });
+                document.getElementById('exportPdfBtn').addEventListener('click', () => {
+                    if (requireLogin()) { /* PDF export logic here */ }
+                });
+                
+                updateSliderValues();
+                calculateMortgage();
+                updateInspirationalQuote();
+            }
+
+            function updateSliderValues() {
+                loanAmountValue.textContent = formatCurrency(loanAmountSlider.value, 'DOP');
+                interestRateValue.textContent = `${parseFloat(interestRateSlider.value).toFixed(1)}%`;
+                loanTermValue.textContent = loanTermSlider.value;
+            }
+
+            function formatCurrency(amount, currencyType) {
+                const options = { style: 'currency', currency: currencyType, minimumFractionDigits: 0, maximumFractionDigits: 0 };
+                const formatter = new Intl.NumberFormat(currentLang === 'es' ? 'es-DO' : 'en-US', options);
+                if (currencyType === 'DOP') {
+                    return `DOP ${new Intl.NumberFormat().format(Math.round(amount))}`;
+                }
+                return formatter.format(amount);
+            }
+
+            function calculateMortgage() {
+                updateSliderValues(); // Keep slider text values in sync
+
+                const principal = parseFloat(loanAmountSlider.value);
+                const annualInterestRate = parseFloat(interestRateSlider.value);
+                const years = parseInt(loanTermSlider.value);
+                const monthlyInterestRate = annualInterestRate / 100 / 12;
+                const numberOfPayments = years * 12;
+                const selectedCurrency = currencySelect.value;
+                const exchangeRate = selectedCurrency === 'USD' ? (1/59) : 1;
+
+                let monthlyPayment = 0;
+                if (monthlyInterestRate > 0) {
+                     const x = Math.pow(1 + monthlyInterestRate, numberOfPayments);
+                     monthlyPayment = (principal * x * monthlyInterestRate) / (x - 1);
+                } else {
+                    monthlyPayment = principal / numberOfPayments;
+                }
+                
+                const totalPayment = monthlyPayment * numberOfPayments;
+                const totalInterest = totalPayment - principal;
+
+                monthlyPaymentResult.textContent = formatCurrency(monthlyPayment * exchangeRate, selectedCurrency);
+                document.getElementById('paymentNumber').textContent = numberOfPayments;
+                totalPrincipalResult.textContent = formatCurrency(principal * exchangeRate, selectedCurrency);
+                totalInterestResult.textContent = formatCurrency(totalInterest * exchangeRate, selectedCurrency);
+                totalPaymentResult.textContent = formatCurrency(totalPayment * exchangeRate, selectedCurrency);
+
+                const startDate = new Date(loanStartDateInput.value + 'T00:00:00'); // Ensure correct date parsing
+                if (!isNaN(startDate)) {
+                    const payoffDateObj = new Date(new Date(startDate).setMonth(startDate.getMonth() + numberOfPayments));
+                    payoffDateResult.textContent = payoffDateObj.toLocaleDateString(currentLang === 'es' ? 'es-ES' : 'en-US', { year: 'numeric', month: 'short' });
+                }
+
+                updateChart(principal, totalInterest);
+            }
+            
+            function updateChart(principal, interest) {
+                const ctx = document.getElementById('paymentChart').getContext('2d');
+                if (paymentChartInstance) paymentChartInstance.destroy();
+                
+                paymentChartInstance = new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: [
+                            currentLang === 'es' ? translations.es.principal : 'Principal',
+                            currentLang === 'es' ? translations.es.interest : 'Interest'
+                        ],
+                        datasets: [{ data: [principal, interest], backgroundColor: ['#DF1783', '#4fd1c5'], borderWidth: 0 }]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
+                });
+            }
+            
+            function generateAmortizationTable(){
+                const principal = parseFloat(loanAmountSlider.value);
+                const monthlyInterestRate = parseFloat(interestRateSlider.value) / 100 / 12;
+                const numberOfPayments = parseInt(loanTermSlider.value) * 12;
+                const x = Math.pow(1 + monthlyInterestRate, numberOfPayments);
+                const monthlyPayment = (principal * x * monthlyInterestRate) / (x - 1);
+                
+                let balance = principal;
+                let tableHTML = '';
+                for (let i = 1; i <= numberOfPayments; i++) {
+                    const interestPayment = balance * monthlyInterestRate;
+                    const principalPayment = monthlyPayment - interestPayment;
+                    balance -= principalPayment;
+                    tableHTML += `<tr><td>${i}</td><td>${formatCurrency(monthlyPayment, 'DOP')}</td><td>${formatCurrency(principalPayment, 'DOP')}</td><td>${formatCurrency(interestPayment, 'DOP')}</td><td>${formatCurrency(balance < 0 ? 0 : balance, 'DOP')}</td></tr>`;
+                }
+                document.getElementById('amortizationTableBody').innerHTML = tableHTML;
+                document.getElementById('amortizationSection').classList.remove('hidden');
+            }
+
+            function updateInspirationalQuote() {
+                const quotes = [
+                    "The secret of getting ahead is getting started. - Mark Twain",
+                    "A goal without a plan is just a wish. - Antoine de Saint-Exupéry",
+                    "Beware of little expenses. A small leak will sink a great ship. - Benjamin Franklin",
+                    "Financial freedom is available to those who learn about it and work for it. - Robert Kiyosaki"
+                ];
+                const randomIndex = Math.floor(Math.random() * quotes.length);
+                document.getElementById('inspirationalQuote').textContent = quotes[randomIndex];
+            }
+
+            function handleSaveCalculation() {
+                if (!requireLogin()) return;
+
+                const calculationData = {
+                    id: Date.now(),
+                    loanAmount: loanAmountSlider.value,
+                    interestRate: interestRateSlider.value,
+                    loanTerm: loanTermSlider.value,
+                    loanStartDate: loanStartDateInput.value,
+                    currency: currencySelect.value,
+                };
+
+                if (!currentUser.savedCalculations) {
+                    currentUser.savedCalculations = [];
+                }
+                currentUser.savedCalculations.push(calculationData);
+                localStorage.setItem(`user_${currentUser.email}`, JSON.stringify(currentUser));
+                showToast('Calculation saved successfully!');
+            }
+
+            // --- CALENDAR & TIMER LOGIC ---
+
+            function renderCalendar(year) {
+                const grid = document.getElementById('calendarGrid');
+                const yearDisplay = document.getElementById('calendarYear');
+                grid.innerHTML = '';
+                yearDisplay.textContent = year;
+
+                const paymentEvents = getAllPaymentEvents();
+                
+                const monthNames = currentLang === 'es' ? 
+                    ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"] :
+                    ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+
+                for (let month = 0; month < 12; month++) {
+                    const monthContainer = document.createElement('div');
+                    monthContainer.className = 'month-container';
+                    
+                    const monthHeader = document.createElement('div');
+                    monthHeader.className = 'month-header';
+                    monthHeader.textContent = monthNames[month];
+                    monthContainer.appendChild(monthHeader);
+                    
+                    const daysHeader = document.createElement('div');
+                    daysHeader.className = 'days-header';
+                    const dayNames = currentLang === 'es' ? ['D', 'L', 'M', 'M', 'J', 'V', 'S'] : ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+                    dayNames.forEach(name => daysHeader.innerHTML += `<div>${name}</div>`);
+                    monthContainer.appendChild(daysHeader);
+
+                    const daysGrid = document.createElement('div');
+                    daysGrid.className = 'days-grid';
+
+                    const firstDay = new Date(year, month, 1).getDay();
+                    const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+                    for (let i = 0; i < firstDay; i++) {
+                        daysGrid.innerHTML += `<div class="day-cell other-month"></div>`;
+                    }
+
+                    for (let day = 1; day <= daysInMonth; day++) {
+                        const dayCell = document.createElement('div');
+                        dayCell.className = 'day-cell';
+                        dayCell.textContent = day;
+                        
+                        const currentDate = new Date(year, month, day);
+                        const today = new Date();
+                        today.setHours(0,0,0,0);
+                        
+                        paymentEvents.forEach(event => {
+                            const eventDate = new Date(event.date);
+                            if (eventDate.getFullYear() === year && eventDate.getMonth() === month && eventDate.getDate() === day) {
+                                const eventDiv = document.createElement('div');
+                                eventDiv.className = 'payment-event';
+                                
+                                // Determine status
+                                let status = 'due';
+                                if (eventDate < today) {
+                                    status = 'late';
+                                }
+                                // In a real app, you'd check if it's paid
+                                // if (event.paid) status = 'paid';
+
+                                eventDiv.classList.add(`payment-status-${status}`);
+                                let statusText = status;
+                                if (currentLang === 'es') {
+                                    statusText = translations.es[status] || status;
+                                }
+                                eventDiv.title = `${event.name} - ${statusText.toUpperCase()}`;
+                                eventDiv.innerHTML = `<span>${event.name}</span>`;
+                                dayCell.appendChild(eventDiv);
+                            }
+                        });
+                        daysGrid.appendChild(dayCell);
+                    }
+                    monthContainer.appendChild(daysGrid);
+                    grid.appendChild(monthContainer);
+                }
+            }
+
+            function getAllPaymentEvents() {
+                if (!currentUser || !currentUser.timers) return [];
+                let events = [];
+                const today = new Date();
+                
+                currentUser.timers.forEach(timer => {
+                    const startDate = new Date(timer.paymentStartDate + 'T00:00:00');
+                    const termInMonths = timer.loanTerm * 12;
+                    for (let i = 0; i < termInMonths; i++) {
+                        const paymentDate = new Date(startDate);
+                        paymentDate.setMonth(startDate.getMonth() + i);
+                        events.push({
+                            name: timer.name,
+                            date: paymentDate.toISOString().split('T')[0] // YYYY-MM-DD format
+                        });
+                    }
+                });
+                return events;
+            }
+
+            function downloadIcal() {
+                if (!requireLogin()) return;
+                const events = getAllPaymentEvents();
+                if (events.length === 0) {
+                    showToast('No payment dates to export. Please add a timer first.');
+                    return;
+                }
+
+                let icalContent = `BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//EasyListings//DR Mortgage App//EN\r\n`;
+
+                events.forEach((event, i) => {
+                    const eventDate = new Date(event.date);
+                    const year = eventDate.getUTCFullYear();
+                    const month = (eventDate.getUTCMonth() + 1).toString().padStart(2, '0');
+                    const day = eventDate.getUTCDate().toString().padStart(2, '0');
+                    const dateString = `${year}${month}${day}`;
+
+                    icalContent += `BEGIN:VEVENT\r\n`;
+                    icalContent += `UID:${Date.now()}${i}@easylistings.com\r\n`;
+                    icalContent += `DTSTAMP:${dateString}T000000Z\r\n`;
+                    icalContent += `DTSTART;VALUE=DATE:${dateString}\r\n`;
+                    icalContent += `SUMMARY:Payment Due: ${event.name}\r\n`;
+                    icalContent += `END:VEVENT\r\n`;
+                });
+
+                icalContent += `END:VCALENDAR\r\n`;
+
+                const blob = new Blob([icalContent], { type: 'text/calendar;charset=utf-8' });
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = 'mortgage_payments.ics';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            }
+
+            function handleAddTimer(e) {
+                 e.preventDefault();
+                 if (!requireLogin()) return;
+                 const newTimer = {
+                     id: Date.now(),
+                     name: document.getElementById('timerName').value,
+                     loanAmount: document.getElementById('timerLoanAmount').value,
+                     interestRate: document.getElementById('timerInterestRate').value,
+                     loanTerm: document.getElementById('timerLoanTerm').value,
+                     paymentStartDate: document.getElementById('timerPaymentStartDate').value,
+                 };
+                 currentUser.timers.push(newTimer);
+                 localStorage.setItem(`user_${currentUser.email}`, JSON.stringify(currentUser));
+                 loadTimers();
+                 addTimerForm.reset();
+                 showToast('Timer added successfully!');
+            }
+            function loadTimers() {
+                if (!currentUser) return;
+                timersList.innerHTML = '';
+                (currentUser.timers || []).forEach(timer => {
+                    const li = document.createElement('li');
+                    li.innerHTML = `<span>${timer.name}</span>
+                                    <button class="btn-danger" data-id="${timer.id}">Delete</button>`;
+                    timersList.appendChild(li);
+                });
+            }
+
+            function handleTimerDelete(e) {
+                 if (e.target.classList.contains('btn-danger')) {
+                    const timerId = parseInt(e.target.dataset.id);
+                    currentUser.timers = currentUser.timers.filter(t => t.id !== timerId);
+                    localStorage.setItem(`user_${currentUser.email}`, JSON.stringify(currentUser));
+                    loadTimers();
+                    showToast('Timer deleted.');
+                }
+            }
+            
+            // --- EVENT LISTENERS ---
+            showRegister.addEventListener('click', () => { loginForm.classList.add('hidden'); registerForm.classList.remove('hidden'); });
+            showLogin.addEventListener('click', () => { registerForm.classList.add('hidden'); loginForm.classList.remove('hidden'); });
+            multiselectLabel.addEventListener('click', () => { multiselectOptions.style.display = multiselectOptions.style.display === 'block' ? 'none' : 'block'; });
+            document.addEventListener('click', (e) => { if (!e.target.closest('.multiselect-container')) multiselectOptions.style.display = 'none'; });
+            loginForm.addEventListener('submit', handleLogin);
+            registerForm.addEventListener('submit', handleRegistration);
+            darkModeToggle.addEventListener('click', () => document.body.classList.toggle('dark-mode'));
+            langToggle.addEventListener('click', toggleLanguage);
+            modalLangToggle.addEventListener('click', toggleLanguage);
+            calculatorNavBtn.addEventListener('click', () => switchView('calculatorView'));
+            calendarBtn.addEventListener('click', () => switchView('calendarView'));
+            timerBtn.addEventListener('click', () => switchView('timerView'));
+            loginNavBtn.addEventListener('click', requireLogin);
+             logoutBtn.addEventListener('click', logout);
+            downloadIcalBtn.addEventListener('click', downloadIcal);
+            addTimerForm.addEventListener('submit', handleAddTimer);
+            timersList.addEventListener('click', handleTimerDelete);
+            document.getElementById('prevYearBtn').addEventListener('click', () => renderCalendar(--currentCalendarYear));
+            document.getElementById('nextYearBtn').addEventListener('click', () => renderCalendar(++currentCalendarYear));
+            syncGoogleCalendarBtn.addEventListener('click', () => {
+                showToast('Google Sync creates individual event links. This feature is best used from within a detailed event view (coming soon!). Use iCal Download for now.', 5000)
+            });
+            
+            // --- INITIAL LOAD ---
+            document.querySelectorAll('[data-lang-key]').forEach(el => { el.dataset.originalText = el.textContent; });
+            initializeCalculator();
+            updateTopNavForLoginState();
+        });
+    </script>
+</body>
+</html>
+
